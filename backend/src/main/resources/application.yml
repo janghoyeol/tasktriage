@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tasktriage}
+    username: ${DB_USERNAME:tasktriage}
+    password: ${DB_PASSWORD:tasktriage}
+  jpa:
+    hibernate:
+      # 2주차 엔티티 작업 시 Flyway 마이그레이션을 추가하고 validate로 바꿀 예정.
+      # 그 전까지는 스키마 자동 생성/검증을 하지 않음(none).
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}

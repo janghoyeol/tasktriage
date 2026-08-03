@@ -1,0 +1,375 @@
+openapi: 3.0.3
+info:
+  title: TaskTriage API
+  description: |
+    작업 요청 접수, AI 기반 긴급도/카테고리 분류, 상태 추적, SLA 관리를 위한 API.
+    설계 배경은 [CLAUDE.md](../../CLAUDE.md), 확정된 ERD는 [docs/erd.md](../erd.md) 참고.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: 로컬 개발 서버
+
+tags:
+  - name: auth
+    description: 회원가입/로그인
+  - name: tasks
+    description: 작업 요청 CRUD 및 상태 전이
+  - name: dashboard
+    description: SLA/상태 현황 요약
+  - name: admin
+    description: Gate 운영 지표 (LLM 호출률, 비용 절감 추정치)
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: 회원가입
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 가입 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '409':
+          description: 이미 존재하는 이메일
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: 로그인, JWT 발급
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tasks:
+    post:
+      tags: [tasks]
+      summary: 작업 요청 등록 (Gate 1 → Gate 2 트리거)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: 등록됨. status는 SUBMITTED로 시작하며, 이후 비동기로 Gate 1/2 분류가 진행됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+    get:
+      tags: [tasks]
+      summary: 작업 목록 조회
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+        - name: urgency
+          in: query
+          schema:
+            $ref: '#/components/schemas/Urgency'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: 작업 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+
+  /api/tasks/{id}:
+    get:
+      tags: [tasks]
+      summary: 작업 상세 + 상태 이력 조회
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: 작업 상세
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+        '404':
+          description: 존재하지 않는 작업
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tasks/{id}/status:
+    patch:
+      tags: [tasks]
+      summary: 상태 전이
+      description: 허용되지 않는 전이(예: DONE → SUBMITTED)는 409로 거부됨
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: 전이 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        '409':
+          description: 허용되지 않는 상태 전이
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tasks/{id}/triage-log:
+    get:
+      tags: [tasks]
+      summary: 분류 근거 조회 (Gate 1/2 판단 이력)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: 분류 로그 목록 (한 작업에 여러 건 있을 수 있음)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TriageLogResponse'
+
+  /api/dashboard/summary:
+    get:
+      tags: [dashboard]
+      summary: SLA 임박/위반 건수, 상태별 작업 개수 요약
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: 대시보드 요약
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+
+  /api/admin/metrics:
+    get:
+      tags: [admin]
+      summary: Gate별 LLM 호출률, 비용 절감 추정치
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: 운영 지표
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMetricsResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  schemas:
+    # ---- enums ----
+    UserRole:
+      type: string
+      enum: [OWNER, ASSIGNEE]
+    Category:
+      type: string
+      enum: [BUG, FEATURE_REQUEST, SUPPORT, BILLING, OTHER]
+      nullable: true
+      description: AI 또는 사람이 분류하기 전에는 null
+    Urgency:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, URGENT]
+    TaskStatus:
+      type: string
+      enum: [SUBMITTED, TRIAGED, NEEDS_REVIEW, QUEUED, IN_PROGRESS, DONE, ARCHIVED]
+    TaskSource:
+      type: string
+      enum: [EMAIL, MESSAGE, MANUAL]
+    TriageGate:
+      type: string
+      enum: [RULE_BASED, LLM]
+
+    # ---- auth ----
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        role: { $ref: '#/components/schemas/UserRole' }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresInSeconds: { type: integer }
+    UserResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+
+    # ---- tasks ----
+    CreateTaskRequest:
+      type: object
+      required: [title, source]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        source: { $ref: '#/components/schemas/TaskSource' }
+    UpdateStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/TaskStatus' }
+    TaskResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        category: { $ref: '#/components/schemas/Category' }
+        urgency: { $ref: '#/components/schemas/Urgency' }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        source: { $ref: '#/components/schemas/TaskSource' }
+        dueAt: { type: string, format: date-time, nullable: true }
+        ownerId: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TaskListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TaskResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+    TaskStatusHistoryEntry:
+      type: object
+      properties:
+        fromStatus: { $ref: '#/components/schemas/TaskStatus' }
+        toStatus: { $ref: '#/components/schemas/TaskStatus' }
+        changedAt: { type: string, format: date-time }
+    TaskDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/TaskResponse'
+        - type: object
+          properties:
+            statusHistory:
+              type: array
+              items: { $ref: '#/components/schemas/TaskStatusHistoryEntry' }
+
+    # ---- triage log ----
+    TriageLogResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        gate: { $ref: '#/components/schemas/TriageGate' }
+        llmCalled: { type: boolean }
+        confidenceScore:
+          type: number
+          format: float
+          nullable: true
+          description: Gate 1(규칙 기반)은 null
+        resultCategory: { $ref: '#/components/schemas/Category' }
+        resultUrgency: { $ref: '#/components/schemas/Urgency' }
+        createdAt: { type: string, format: date-time }
+
+    # ---- dashboard / admin ----
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        countsByStatus:
+          type: object
+          additionalProperties: { type: integer }
+        slaApproaching: { type: integer, description: "마감 임박(예: 24시간 이내) 작업 수" }
+        slaBreached: { type: integer, description: "마감을 넘긴 작업 수" }
+    AdminMetricsResponse:
+      type: object
+      properties:
+        gate1FilteredRate:
+          type: number
+          format: float
+          description: "전체 요청 중 Gate 1에서 걸러져 LLM을 호출하지 않은 비율 (0.0~1.0)"
+        gate2CallRate:
+          type: number
+          format: float
+          description: "전체 요청 중 Gate 2(LLM)까지 도달한 비율"
+        avgConfidenceScore:
+          type: number
+          format: float
+        estimatedCostSavingUsd:
+          type: number
+          format: float
+          description: "모든 요청에 LLM을 호출했을 경우 대비 절감 추정 비용"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: integer }
+        code: { type: string, example: TASK_NOT_FOUND }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
