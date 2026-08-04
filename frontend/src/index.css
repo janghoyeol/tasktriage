@@ -44,6 +44,46 @@ h1 {
   margin: 0 0 16px;
 }
 
+h2 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+section {
+  margin: 28px 0;
+}
+
+.filters,
+.create-task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.create-task-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.create-task-form input[type='text']:first-child {
+  flex: 1;
+  min-width: 160px;
+}
+
+select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
 /* ---- layout ---- */
 
 .app-shell {
