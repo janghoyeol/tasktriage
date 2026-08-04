@@ -28,6 +28,10 @@ app:
   triage:
     service-url: ${TRIAGE_SERVICE_URL:http://localhost:8001}
     confidence-threshold: ${CONFIDENCE_THRESHOLD:0.7}
+    # Haiku 4.5 분류 호출 1건당 대략적인 비용 추정치. 관리자 지표의 "비용 절감 추정"에만 쓰임.
+    avg-cost-per-llm-call-usd: ${AVG_LLM_COST_USD:0.0005}
+    # SLA 임박 판단 기준 (마감까지 이 시간 이내면 "임박"으로 집계)
+    sla-approaching-hours: ${SLA_APPROACHING_HOURS:24}
   jwt:
     # HS256은 최소 256비트(32바이트) 키가 필요 — 개발용 기본값도 그 기준을 맞춰둠.
     # 운영 환경에서는 반드시 JWT_SECRET 환경변수로 강한 무작위 값을 넣을 것.
