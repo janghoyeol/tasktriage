@@ -50,7 +50,7 @@ public class TaskService {
         return task;
     }
 
-    Task getOrThrow(Long taskId) {
+    public Task getOrThrow(Long taskId) {
         return taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
     }
 }

@@ -25,6 +25,9 @@ management:
         include: health,info
 
 app:
+  triage:
+    service-url: ${TRIAGE_SERVICE_URL:http://localhost:8001}
+    confidence-threshold: ${CONFIDENCE_THRESHOLD:0.7}
   jwt:
     # HS256은 최소 256비트(32바이트) 키가 필요 — 개발용 기본값도 그 기준을 맞춰둠.
     # 운영 환경에서는 반드시 JWT_SECRET 환경변수로 강한 무작위 값을 넣을 것.

@@ -7,10 +7,13 @@ import com.tasktriage.backend.task.dto.TaskMapper;
 import com.tasktriage.backend.task.dto.TaskResponse;
 import com.tasktriage.backend.task.dto.UpdateStatusRequest;
 import com.tasktriage.backend.triage.TriageLogRepository;
+import com.tasktriage.backend.triage.TriagePipeline;
 import com.tasktriage.backend.triage.dto.TriageLogResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -30,15 +33,28 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TaskController {
 
+    private static final Logger log = LoggerFactory.getLogger(TaskController.class);
+
     private final TaskService taskService;
     private final TaskStatusHistoryRepository taskStatusHistoryRepository;
     private final TriageLogRepository triageLogRepository;
+    private final TriagePipeline triagePipeline;
 
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(
             Authentication authentication, @Valid @RequestBody CreateTaskRequest request) {
-        Task task = taskService.createTask(authentication.getName(), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TaskMapper.toResponse(task));
+        Task created = taskService.createTask(authentication.getName(), request);
+
+        try {
+            triagePipeline.triage(created.getId());
+        } catch (RuntimeException e) {
+            // 분류 파이프라인이 실패해도(예: Gate 2 서비스 다운) 작업 등록 자체는 유지한다.
+            // Task는 SUBMITTED 상태로 남고, 이후 재시도나 수동 분류로 이어질 수 있다.
+            log.warn("Triage pipeline failed for task {}", created.getId(), e);
+        }
+
+        Task result = taskService.getOrThrow(created.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(TaskMapper.toResponse(result));
     }
 
     @GetMapping
