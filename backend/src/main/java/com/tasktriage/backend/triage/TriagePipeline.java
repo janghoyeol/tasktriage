@@ -1,5 +1,6 @@
 package com.tasktriage.backend.triage;
 
+import com.tasktriage.backend.sla.SLACalculator;
 import com.tasktriage.backend.task.Task;
 import com.tasktriage.backend.task.TaskService;
 import com.tasktriage.backend.task.TaskStatus;
@@ -24,6 +25,7 @@ public class TriagePipeline {
     private final Gate2Client gate2Client;
     private final TriageLogRepository triageLogRepository;
     private final TaskService taskService;
+    private final SLACalculator slaCalculator;
 
     @Value("${app.triage.confidence-threshold}")
     private double confidenceThreshold;
@@ -39,6 +41,7 @@ public class TriagePipeline {
 
     private void applyGate1(Task task, RuleBasedClassifier.Result result) {
         task.applyClassification(result.category(), result.urgency());
+        task.scheduleDueAt(slaCalculator.calculateDueAt(task.getCreatedAt(), result.urgency()));
         triageLogRepository.save(
                 new TriageLog(task, TriageGate.RULE_BASED, false, null, result.category(), result.urgency()));
 
@@ -50,6 +53,7 @@ public class TriagePipeline {
         Gate2Client.ClassifyResponse response = gate2Client.classify(task.getTitle(), task.getDescription());
 
         task.applyClassification(response.category(), response.urgency());
+        task.scheduleDueAt(slaCalculator.calculateDueAt(task.getCreatedAt(), response.urgency()));
         triageLogRepository.save(new TriageLog(
                 task, TriageGate.LLM, true, response.confidence(), response.category(), response.urgency()));
 
