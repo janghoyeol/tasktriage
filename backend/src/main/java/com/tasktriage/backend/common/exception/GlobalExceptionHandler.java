@@ -1,6 +1,8 @@
 package com.tasktriage.backend.common.exception;
 
 import com.tasktriage.backend.auth.EmailAlreadyExistsException;
+import com.tasktriage.backend.task.InvalidTaskTransitionException;
+import com.tasktriage.backend.task.TaskNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,6 +17,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), "EMAIL_ALREADY_EXISTS", e.getMessage()));
+    }
+
+    @ExceptionHandler(TaskNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleTaskNotFound(TaskNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND.value(), "TASK_NOT_FOUND", e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTaskTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTaskTransition(InvalidTaskTransitionException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), "INVALID_STATUS_TRANSITION", e.getMessage()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

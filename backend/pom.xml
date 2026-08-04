@@ -92,6 +92,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- JUnit5/AssertJ/Mockito 등 기본 테스트 도구 모음 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator-test</artifactId>

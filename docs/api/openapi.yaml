@@ -232,6 +232,8 @@ components:
     Urgency:
       type: string
       enum: [LOW, MEDIUM, HIGH, URGENT]
+      nullable: true
+      description: AI 또는 사람이 분류하기 전에는 null (category와 동일)
     TaskStatus:
       type: string
       enum: [SUBMITTED, TRIAGED, NEEDS_REVIEW, QUEUED, IN_PROGRESS, DONE, ARCHIVED]
