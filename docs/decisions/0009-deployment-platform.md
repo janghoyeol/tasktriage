@@ -32,8 +32,8 @@
 
 | 컴포넌트 | 플랫폼 | 비고 |
 |---|---|---|
-| backend (Spring Boot) | Render Web Service (무료) | 15분 무활동 후 슬립, 재요청 시 ~1분 콜드스타트 |
-| triage-service (FastAPI) | Render Web Service (무료) | 위와 동일 |
+| backend (Spring Boot) | Render Web Service (무료) | 15분 무활동 후 슬립, 재요청 시 콜드스타트 70~140초(실측, 0.1 CPU) |
+| triage-service (FastAPI) | Render Web Service (무료) | 위와 동일한 슬립 정책, 콜드스타트는 backend보다 짧음 |
 | frontend (React 정적 빌드) | Render Static Site (무료) | 정적 사이트는 슬립 없음 — 항상 빠름 |
 | DB | **Neon Postgres (무료)** | Render 대신 선택 — 만료 없음 |
 
@@ -42,9 +42,13 @@
 
 ### 알려진 트레이드오프 (면접 데모 시 참고)
 
-- 콜드스타트: backend/triage-service가 잠들어 있으면 첫 요청에 최대 ~1분
-  걸릴 수 있다. 면접 중 라이브 데모라면 링크를 미리 한 번 열어서 깨워두는
-  걸 권장 — README에 적어둘 것.
+- **콜드스타트 (실측)**: 처음엔 "~1분"으로 추정했는데, 실제 배포해보니 backend
+  (Spring Boot/JVM)는 **첫 기동에 140초, 재시작 시에도 70초** 넘게 걸렸다.
+  원인은 Render 무료 티어의 CPU가 **0.1코어**뿐이라 — 로컬에서 5~10초면
+  끝나는 Hibernate/Flyway/Spring context 초기화가 여기선 10배 이상 느리다.
+  triage-service(FastAPI, 훨씬 가벼운 런타임)는 이 정도로 느리진 않았다.
+  면접 중 라이브 데모라면 **backend 링크를 최소 2~3분 전에는 미리 열어서
+  깨워둬야** 한다 — README에도 이 실측치로 적어뒀다.
 - Neon 무료 티어 컴퓨트시간(월 100시간)을 넘기면 그 달은 접속이 제한될 수
   있음. 이 프로젝트 트래픽 규모면 초과 가능성은 낮다.
 - **Redis는 배포 대상에서 제외**: 브리핑 원안 기술 스택엔 있었지만 실제
@@ -52,11 +56,14 @@
   방지/대기 큐 기능 자체를 만들지 않았다. 없는 걸 배포할 필요는 없어서
   Render 무료 Redis도 쓰지 않는다.
 
-## 다음 단계 (4주차 범위, 지금은 안 함)
+## 진행 상황 (2026-08-05 갱신)
 
-- backend/triage-service 각각 `Dockerfile` 작성
-- `docker-compose.yml`에 로컬 통합 실행용으로 두 서비스 추가 (현재는 DB만
-  있음)
-- Render에 세 서비스 연결 + Neon 연결 문자열을 backend `application.yml`의
-  DataSource로 교체
-- 배포된 URL에서 회원가입~작업 등록~AI 분류~상태 변경 전체 플로우 재검증
+- backend/triage-service Dockerfile 작성, docker-compose 통합 완료 (ADR 0010)
+- Neon 프로젝트 생성 (Postgres 18, Singapore 리전, Neon Auth 비활성화 — 자체
+  JWT 인증과 중복이라 불필요)
+- Render에 triage-service, backend 배포 완료. Neon 연결은 `DB_HOST/PORT/NAME/
+  USERNAME/PASSWORD` + `DB_SSLMODE=require` + `DB_CHANNEL_BINDING=require`
+  환경변수로 구성 (pgjdbc 파라미터명이 Neon 연결 문자열의 `channel_binding`과
+  달리 camelCase `channelBinding`이라 별도 확인 필요했음)
+- 남은 것: frontend Render Static Site 배포, backend `CORS_ALLOWED_ORIGINS`를
+  실제 프론트 URL로 갱신, 배포된 URL에서 전체 플로우 재검증
