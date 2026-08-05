@@ -66,7 +66,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // 쿠키 세션이 없는 stateless API라 CSRF 공격 대상이 아님
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        // actuator는 application.yml에서 노출하기로 한 세 엔드포인트만 허용
+                        // (health/info/prometheus) — 그 이상은 열지 않는다.
+                        .requestMatchers("/api/auth/**", "/actuator/health", "/actuator/info", "/actuator/prometheus")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

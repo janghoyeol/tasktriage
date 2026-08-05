@@ -22,7 +22,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # prometheus: Prometheus가 스크레이핑할 /actuator/prometheus 엔드포인트.
+        # 데모/포트폴리오 스코프라 인증 없이 노출 — 실제 운영 서비스라면 별도 인증/네트워크 격리 필요.
+        include: health,info,prometheus
 
 app:
   cors:

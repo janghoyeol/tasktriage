@@ -17,5 +17,77 @@ services:
       timeout: 5s
       retries: 5
 
+  triage-service:
+    build: ./triage-service
+    container_name: tasktriage-triage
+    restart: unless-stopped
+    # ANTHROPIC_API_KEY 등 실제 값은 triage-service/.env.example을 복사해 만든
+    # triage-service/.env에서 읽는다 (.gitignore로 커밋 안 됨).
+    env_file:
+      - ./triage-service/.env
+    ports:
+      - "8001:8001"
+
+  backend:
+    build: ./backend
+    container_name: tasktriage-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      triage-service:
+        condition: service_started
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: tasktriage
+      DB_USERNAME: tasktriage
+      DB_PASSWORD: tasktriage
+      TRIAGE_SERVICE_URL: http://triage-service:8001
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      # 로컬/데모 전용 기본값. 실제 배포 시 반드시 환경변수로 강한 무작위 값을 넣을 것.
+      JWT_SECRET: docker-compose-local-dev-secret-change-in-production-please
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # 브라우저가 호스트에서 접속하므로 컨테이너 내부 네트워크 주소가 아니라
+        # 호스트에 노출된 backend 포트를 가리켜야 한다.
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: tasktriage-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tasktriage-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tasktriage-grafana
+    restart: unless-stopped
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - tasktriage-grafana-data:/var/lib/grafana
+    environment:
+      # 로컬 데모용 기본 비밀번호. 외부에 노출할 경우 반드시 바꿀 것.
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   tasktriage-db-data:
+  tasktriage-grafana-data:
