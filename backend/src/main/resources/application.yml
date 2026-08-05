@@ -2,7 +2,9 @@ spring:
   application:
     name: backend
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tasktriage}
+    # 로컬 docker-compose Postgres는 SSL 미설정이라 기본값은 disable.
+    # Neon 등 매니지드 Postgres는 SSL을 요구하므로 배포 환경에서 DB_SSLMODE=require로 오버라이드.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tasktriage}?sslmode=${DB_SSLMODE:disable}
     username: ${DB_USERNAME:tasktriage}
     password: ${DB_PASSWORD:tasktriage}
   jpa:
