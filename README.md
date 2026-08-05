@@ -4,6 +4,16 @@
 
 > 상세 기획은 [CLAUDE.md](./CLAUDE.md), 설계 결정 기록은 [docs/decisions](./docs/decisions)를 참고하세요.
 
+## 라이브 데모
+
+| | URL |
+|---|---|
+| 프론트엔드 | https://tasktriage-frontend.onrender.com |
+| 백엔드 API | https://tasktriage-backend.onrender.com |
+| triage-service (FastAPI docs) | https://tasktriage-triage.onrender.com/docs |
+
+backend/triage-service는 Render 무료 티어라 15분 무활동 후 슬립합니다. 오래 안 쓴 상태에서 처음 접속하면 **콜드스타트에 최대 2~3분** 걸릴 수 있습니다(실측치, [ADR 0009](./docs/decisions/0009-deployment-platform.md) 참고) — 라이브 데모 전이라면 링크를 미리 열어서 깨워두는 걸 권장합니다.
+
 ## 왜 만들었나
 
 여러 곳에서 작업 요청이 쏟아질 때 무엇부터 처리해야 할지 판단하는 데 시간이 낭비된다는 문제에서 출발했습니다. "판단은 AI가 1차로 보조하되, 신뢰할 수 없는 판단은 반드시 사람이 검토한다"는 원칙으로 설계했습니다.
@@ -85,7 +95,8 @@ Grafana는 Prometheus 데이터소스가 자동으로 등록돼 있습니다. �
 | [0005](./docs/decisions/0005-gate-pipeline-and-restclient-issue.md) | Spring `RestClient`와 uvicorn 간 HTTP 레벨 호환성 문제 — 원인은 100% 못 밝혔지만 재현 가능한 해결책으로 우회 |
 | [0007](./docs/decisions/0007-api-integration-tests.md) | `javap`로 Boot 4의 `JacksonAutoConfiguration` 바이트코드를 직접 읽어서, Boot 4가 Jackson 3만 자동 등록한다는 걸 발견 |
 | [0009](./docs/decisions/0009-deployment-platform.md) | Render.com 무료 Postgres가 30일 뒤 만료된다는 걸 재검증 과정에서 발견해 Neon으로 배포 전략을 바꿈 |
+| [0010](./docs/decisions/0010-docker-compose-and-monitoring.md) | `/actuator/prometheus`가 403 — 0003에서 겪은 "인증은 통과해도 경로가 안 열려있으면 403" 패턴이 그대로 재현 |
 
 ## 진행 상황
 
-1~4주차 로드맵은 [CLAUDE.md](./CLAUDE.md)를 참고하세요. 현재 백엔드/AI 파이프라인/프론트엔드 핵심 기능, 테스트(유닛+통합 66개), CI, Docker Compose 기반 로컬 실행, 모니터링까지 구축 완료. 실제 배포(Render + Neon)는 진행 중입니다.
+1~4주차 로드맵은 [CLAUDE.md](./CLAUDE.md)를 참고하세요. 백엔드/AI 파이프라인/프론트엔드 핵심 기능, 테스트(유닛+통합 66개), CI, Docker Compose 기반 로컬 실행, 모니터링, 실제 배포(Render + Neon)까지 모두 완료했습니다.
