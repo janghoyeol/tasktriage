@@ -84,7 +84,7 @@ Grafana는 Prometheus 데이터소스가 자동으로 등록돼 있습니다. �
 이 프로젝트는 Claude Code를 코드 생성기가 아니라 **설계 논의 + 코드 리뷰 파트너**로 쓰면서 진행했습니다.
 
 - **기능 구현 전 설계 논의**: Spring Security 필터 체인, JPA 연관관계, 상태 머신, CI/CD 같은 처음 다뤄보는 주제는 코드를 먼저 받지 않고 트레이드오프를 먼저 설명받은 뒤 합의하고 구현했습니다.
-- **모든 주요 설계 결정을 ADR로 기록**: [docs/decisions](./docs/decisions)에 10개의 ADR이 있습니다. 각각 배경, 결정, 이유, 검토했던 대안, 그리고 실제로 겪은 삽질과 그 해결 과정까지 담겨 있습니다.
+- **모든 주요 설계 결정을 ADR로 기록**: [docs/decisions](./docs/decisions)에 11개의 ADR이 있습니다. 각각 배경, 결정, 이유, 검토했던 대안, 그리고 실제로 겪은 삽질과 그 해결 과정까지 담겨 있습니다.
 - **추측 대신 직접 확인하는 습관**: 라이브러리 버전이 바뀌면서(특히 Spring Boot 4로의 전환) 문서와 실제 동작이 다른 경우가 여러 번 있었습니다. 그때마다 Maven Central 메타데이터, 라이브러리 BOM, 심지어 `javap`로 프레임워크 클래스의 바이트코드/어노테이션까지 직접 열어봐서 확인한 뒤 대응했습니다.
 - **원인을 100% 못 밝혀도 재현 가능하면 기록하고 넘어감**: 모든 버그를 끝까지 파고들기보다, 재현 가능한 해결책을 확인하면 원인 추정과 함께 문서로 남기고 실용적으로 넘어갔습니다.
 
@@ -96,6 +96,7 @@ Grafana는 Prometheus 데이터소스가 자동으로 등록돼 있습니다. �
 | [0007](./docs/decisions/0007-api-integration-tests.md) | `javap`로 Boot 4의 `JacksonAutoConfiguration` 바이트코드를 직접 읽어서, Boot 4가 Jackson 3만 자동 등록한다는 걸 발견 |
 | [0009](./docs/decisions/0009-deployment-platform.md) | Render.com 무료 Postgres가 30일 뒤 만료된다는 걸 재검증 과정에서 발견해 Neon으로 배포 전략을 바꿈 |
 | [0010](./docs/decisions/0010-docker-compose-and-monitoring.md) | `/actuator/prometheus`가 403 — 0003에서 겪은 "인증은 통과해도 경로가 안 열려있으면 403" 패턴이 그대로 재현 |
+| [0011](./docs/decisions/0011-render-deploy-debugging.md) | Netlify식 `_redirects` 파일이 Render에선 200 rewrite가 아니라 301 redirect로 동작 — 공식 문서 확인 후 대시보드 설정으로 전환 |
 
 ## 진행 상황
 
